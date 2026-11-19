@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light only">
+<title>Name Plate Studio</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231f2430'/%3E%3Ctext x='32' y='47' text-anchor='middle' font-family='Georgia,serif' font-weight='700' font-size='44' fill='%23ffffff'%3EN%3C/text%3E%3Cpath d='M10 38 C22 28, 42 46, 54 32' fill='none' stroke='%23fdd835' stroke-width='5.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f5f6f8; --panel: #ffffff; --border: #e2e5ea; --text: #1f2430;
+    --muted: #6b7280; --accent: #2f6fed; --accent-d: #1f56c4; --err: #c62828;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; align-items: center; gap: 14px; padding: 10px 20px; height: 56px;
+    background: var(--panel); border-bottom: 1px solid var(--border); }
+  header h1 { font-size: 17px; margin: 0; font-weight: 650; white-space: nowrap; }
+  .pill { font-size: 11px; font-weight: 600; color: var(--accent-d); background: #e8effd; padding: 3px 9px; border-radius: 999px; }
+  header .spacer { flex: 1; }
+  .local-note { font-size: 12px; color: var(--muted); }
+  .local-note code { background: #eef0f3; padding: 2px 5px; border-radius: 4px; color: var(--text); }
+  main { display: grid; grid-template-columns: 350px 1fr; height: calc(100% - 56px); }
+  aside { background: var(--panel); border-right: 1px solid var(--border); overflow-y: auto; padding: 16px 18px 24px; }
+  fieldset { border: none; padding: 0; margin: 0 0 18px; }
+  legend { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  label { display: block; font-weight: 550; margin: 10px 0 4px; }
+  input[type=text], input[type=number], select {
+    width: 100%; padding: 7px 9px; border: 1px solid var(--border); border-radius: 7px;
+    font: inherit; background: #fff; color: var(--text); }
+  input:focus, select:focus { outline: 2px solid #c9dafc; border-color: var(--accent); }
+  .row3 { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+  .slider { display: grid; grid-template-columns: 1fr 64px; gap: 8px; align-items: center; }
+  .slider input[type=number] { padding: 5px 6px; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .hidden { display: none !important; }
+  button { font: inherit; cursor: pointer; border-radius: 7px; padding: 8px 13px; border: 1px solid var(--border); background: #fff; color: var(--text); }
+  button:hover:not(:disabled) { border-color: #c4cad4; }
+  button:disabled { opacity: .55; cursor: default; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .presets button { padding: 5px 9px; font-size: 12px; display: flex; gap: 6px; align-items: center; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,.15); display: inline-block; }
+  .colors { display: flex; gap: 14px; align-items: center; margin-top: 8px; }
+  .colors label { display: flex; align-items: center; gap: 6px; margin: 0; font-weight: 500; }
+  input[type=color] { width: 34px; height: 26px; border: 1px solid var(--border); border-radius: 6px; padding: 1px; background: #fff; }
+  .callout { background: #f8f9fb; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 12px; color: var(--muted); }
+  .callout b { color: var(--text); }
+  .callout pre { margin: 6px 0 0; padding: 7px 9px; background: #eef0f3; border-radius: 6px; color: var(--text); overflow-x: auto; font-size: 11px; }
+  section.view { position: relative; display: flex; flex-direction: column; min-width: 0; }
+  #viewer { flex: 1; position: relative; background: radial-gradient(circle at 50% 38%, #fffdf9 0%, #f3ece2 58%, #e4d8c8 100%); transition: background .25s ease; }
+  #viewer.bg-studio { background: radial-gradient(circle at 50% 38%, #ffffff 0%, #f1f4f8 58%, #dfe5ee 100%); }
+  #viewer.bg-dark { background: radial-gradient(circle at 50% 38%, #2e3440 0%, #1d222b 62%, #13171e 100%); }
+  #viewer canvas { display: block; }
+  .toolbar { display: flex; gap: 8px; align-items: center; padding: 10px 16px; background: var(--panel); border-top: 1px solid var(--border); flex-wrap: wrap; }
+  .toolbar .spacer { flex: 1; }
+  .stats { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .stats b { color: var(--text); font-weight: 600; }
+  .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+  .badge { background: rgba(255,255,255,.95); border: 1px solid var(--border); border-radius: 10px; padding: 10px 16px; box-shadow: 0 4px 16px rgba(0,0,0,.07); display: flex; gap: 10px; align-items: center; }
+  .spinner { width: 16px; height: 16px; border: 2px solid #c9dafc; border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #error { position: absolute; top: 52px; left: 50%; transform: translateX(-50%); max-width: 80%; background: #fdecec; color: var(--err); border: 1px solid #f5c2c2; border-radius: 8px; padding: 9px 14px; z-index: 3; }
+  .views { position: absolute; top: 12px; right: 12px; display: flex; gap: 4px; z-index: 2; }
+  .views button, .stage-bar button { padding: 5px 10px; font-size: 12px; background: rgba(255,255,255,.86); backdrop-filter: blur(6px); border-color: rgba(0,0,0,.08); }
+  .views button:hover, .stage-bar button:hover { background: #fff; }
+  .stage-bar { position: absolute; top: 12px; left: 12px; display: flex; gap: 4px; z-index: 2; }
+  .stage-bar button.on { background: var(--text); color: #fff; border-color: var(--text); }
+  @media (max-width: 800px) {
+    header { height: auto; flex-wrap: wrap; }
+    .local-note { display: none; }
+    main { grid-template-columns: 1fr; height: auto; }
+    aside { border-right: none; border-bottom: 1px solid var(--border); }
+    #viewer { height: 60vh; flex: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Name Plate Studio</h1>
+  <span class="pill">Live 3D Preview</span>
+  <span class="spacer"></span>
+  <span class="local-note">Full CadQuery + STEP + Sweeping Plate: run <code>python app.py</code> locally</span>
+</header>
+<main>
+  <aside>
+    <form id="form" autocomplete="off">
+      <fieldset>
+        <legend>Presets</legend>
+        <div class="presets" id="presets"></div>
+      </fieldset>
+      <fieldset>
+        <legend>Name</legend>
+        <div class="row3">
+          <div><label>Name</label><input type="text" name="name" value="bernardo"></div>
+          <div><label>Initial</label><input type="text" name="initial" maxlength="2" placeholder="auto"></div>
+        </div>
+        <div class="colors">
+          <label><input type="color" id="c_base" value="#e53935"> Initial</label>
+          <label><input type="color" id="c_accent" value="#fdd835"> Name</label>
+        </div>
+        <div class="hint">Two separate flat-backed parts (Initial + Name) — print in different colors and glue together.</div>
+      </fieldset>
+      <fieldset>
+        <legend>Big initial</legend>
+        <select name="i_font">
+          <optgroup label="Serif / Initial">
+            <option value="fonts/PTSerif-Bold.ttf" selected>PT Serif Bold</option>
+            <option value="fonts/AbrilFatface.ttf">Abril Fatface</option>
+          </optgroup>
+          <optgroup label="Display">
+            <option value="fonts/Aldo.ttf">Aldo</option>
+          </optgroup>
+          <optgroup label="Custom">
+            <option value="upload">Upload .ttf / .otf…</option>
+          </optgroup>
+        </select>
+        <input type="file" name="i_file" accept=".ttf,.otf" class="hidden" style="margin-top:6px">
+        <label>Letter height (mm)</label>
+        <div class="slider"><input type="range" min="50" max="250" step="1" data-for="initial_height"><input type="number" name="initial_height" value="140" step="1"></div>
+        <label>Thickness (mm)</label>
+        <div class="slider"><input type="range" min="4" max="35" step="0.5" data-for="initial_depth"><input type="number" name="initial_depth" value="18" step="0.5"></div>
+      </fieldset>
+      <fieldset>
+        <legend>Cursive name</legend>
+        <select name="n_font">
+          <optgroup label="Cursive / Script">
+            <option value="fonts/Pacifico.ttf" selected>Pacifico</option>
+            <option value="fonts/Lobster.ttf">Lobster</option>
+            <option value="fonts/GrandHotel.ttf">Grand Hotel</option>
+            <option value="fonts/KaushanScript.ttf">Kaushan Script</option>
+            <option value="fonts/Cookie.ttf">Cookie</option>
+          </optgroup>
+          <optgroup label="Custom">
+            <option value="upload">Upload .ttf / .otf…</option>
+          </optgroup>
+        </select>
+        <input type="file" name="n_file" accept=".ttf,.otf" class="hidden" style="margin-top:6px">
+        <label>Font size</label>
+        <div class="slider"><input type="range" min="12" max="120" step="0.5" data-for="name_size"><input type="number" name="name_size" value="46" step="0.5"></div>
+        <label>Thickness (mm)</label>
+        <div class="slider"><input type="range" min="1" max="15" step="0.5" data-for="name_depth"><input type="number" name="name_depth" value="5" step="0.5"></div>
+        <label>Horizontal offset (mm)</label>
+        <div class="slider"><input type="range" min="-80" max="80" step="1" data-for="name_offset_x"><input type="number" name="name_offset_x" value="0" step="1"></div>
+        <label>Vertical position (mm)</label>
+        <div class="slider"><input type="range" min="-120" max="120" step="1" data-for="name_offset_y"><input type="number" name="name_offset_y" value="-5" step="1"></div>
+        <label>Tilt (°)</label>
+        <div class="slider"><input type="range" min="-30" max="30" step="1" data-for="name_angle"><input type="number" name="name_angle" value="6" step="1"></div>
+      </fieldset>
+      <div class="callout">
+        <b>Local CAD Engine</b><br>
+        Clone this repo and run locally for CadQuery boolean-fused STLs, STEP assemblies, and Sweeping Name Plates:
+        <pre>pip install -r requirements.txt
+python app.py</pre>
+      </div>
+    </form>
+  </aside>
+
+  <section class="view">
+    <div id="viewer">
+      <div class="stage-bar">
+        <button type="button" data-bg="warm" class="on">Warm</button>
+        <button type="button" data-bg="studio">Studio</button>
+        <button type="button" data-bg="dark">Dark</button>
+        <button type="button" id="toggle-grid">Grid</button>
+      </div>
+      <div class="views">
+        <button data-view="front">Front</button>
+        <button data-view="iso">3D</button>
+        <button data-view="top">Top</button>
+        <button data-view="side">Side</button>
+      </div>
+      <div class="overlay hidden" id="busy"><div class="badge"><div class="spinner"></div>Loading font…</div></div>
+      <div id="error" class="hidden"></div>
+    </div>
+    <div class="toolbar">
+      <span class="stats" id="stats">—</span>
+      <span class="spacer"></span>
+      <button id="dl-initial" disabled>Initial STL</button>
+      <button id="dl-name" disabled>Name STL</button>
+    </div>
+  </section>
+</main>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/opentype.js@1.3.4/dist/opentype.min.js"></script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { STLExporter } from "three/addons/exporters/STLExporter.js";
+
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => document.querySelectorAll(s);
+const form = $("#form"), viewer = $("#viewer");
+
+// ---------- three.js studio ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+viewer.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 5000);
+camera.up.set(0, 0, 1);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.07;
+
+scene.add(new THREE.HemisphereLight(0xfffaf2, 0xd4cec4, 0.55));
+const keyL = new THREE.DirectionalLight(0xfff8ee, 1.55);
+keyL.position.set(160, -240, 300);
+keyL.castShadow = true;
+keyL.shadow.mapSize.set(2048, 2048);
+keyL.shadow.camera.near = 10; keyL.shadow.camera.far = 1200;
+keyL.shadow.bias = -0.0005; keyL.shadow.normalBias = 0.04; keyL.shadow.radius = 4;
+scene.add(keyL);
+const fillL = new THREE.DirectionalLight(0xeef4ff, 0.55); fillL.position.set(-220, -140, 140); scene.add(fillL);
+const rimL = new THREE.DirectionalLight(0xffffff, 0.65); rimL.position.set(-80, 220, 180); scene.add(rimL);
+
+const floorMat = new THREE.ShadowMaterial({ opacity: 0.18 });
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), floorMat);
+floor.receiveShadow = true; scene.add(floor);
+
+const grid = new THREE.GridHelper(600, 60, 0xc5cad3, 0xdde1e7);
+grid.rotation.x = Math.PI / 2; grid.visible = false; scene.add(grid);
+
+const mats = {
+  base: new THREE.MeshPhysicalMaterial({ color: 0xe53935, roughness: 0.38, metalness: 0.02, clearcoat: 0.18, clearcoatRoughness: 0.42, envMapIntensity: 0.65 }),
+  accent: new THREE.MeshPhysicalMaterial({ color: 0xfdd835, roughness: 0.34, metalness: 0.02, clearcoat: 0.22, clearcoatRoughness: 0.38, envMapIntensity: 0.7 }),
+};
+const group = new THREE.Group(); scene.add(group);
+let radius = 80, targetZ = 70, needView = true;
+let initialMesh = null, nameMesh = null;
+
+function resize() {
+  const w = viewer.clientWidth, h = viewer.clientHeight;
+  renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(viewer);
+(function loop() { requestAnimationFrame(loop); controls.update(); renderer.render(scene, camera); })();
+
+function setView(v) {
+  const d = radius * 2.7;
+  const dirs = { iso: [0.32, -1, 0.24], front: [0, -1, 0.04], top: [0, -0.0001, 1], side: [1, 0, 0.08] };
+  const dir = new THREE.Vector3(...dirs[v]).normalize().multiplyScalar(d);
+  camera.position.set(dir.x, dir.y, dir.z + targetZ);
+  controls.target.set(0, 0, targetZ); controls.update();
+}
+$$("[data-view]").forEach(b => b.onclick = () => setView(b.dataset.view));
+
+$$("[data-bg]").forEach(b => b.onclick = () => {
+  $$("[data-bg]").forEach(x => x.classList.toggle("on", x === b));
+  viewer.classList.remove("bg-studio", "bg-dark");
+  if (b.dataset.bg !== "warm") viewer.classList.add("bg-" + b.dataset.bg);
+  floorMat.opacity = b.dataset.bg === "dark" ? 0.38 : 0.18;
+});
+$("#toggle-grid").onclick = (e) => { grid.visible = !grid.visible; e.currentTarget.classList.toggle("on", grid.visible); };
+
+// ---------- font loading & geometry ----------
+const fontCache = new Map();
+async function loadFont(url) {
+  if (fontCache.has(url)) return fontCache.get(url);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Could not load font: ${url}`);
+  const font = opentype.parse(await res.arrayBuffer());
+  fontCache.set(url, font);
+  return font;
+}
+
+function textToShapes(font, text, size) {
+  const path = font.getPath(text, 0, 0, size);
+  const sp = new THREE.ShapePath();
+  for (const c of path.commands) {
+    if (c.type === "M") sp.moveTo(c.x, -c.y);
+    else if (c.type === "L") sp.lineTo(c.x, -c.y);
+    else if (c.type === "Q") sp.quadraticCurveTo(c.x1, -c.y1, c.x, -c.y);
+    else if (c.type === "C") sp.bezierCurveTo(c.x1, -c.y1, c.x2, -c.y2, c.x, -c.y);
+    else if (c.type === "Z" && sp.currentPath) sp.currentPath.closePath();
+  }
+  return sp.toShapes(true);
+}
+
+function extrudeText(font, text, size, depth) {
+  const shapes = textToShapes(font, text, size);
+  if (!shapes.length) throw new Error(`No outlines generated for "${text}".`);
+  const g = new THREE.ExtrudeGeometry(shapes, { depth, bevelEnabled: false, curveSegments: 16 });
+  g.computeBoundingBox();
+  const c = new THREE.Vector3(); g.boundingBox.getCenter(c);
+  g.translate(-c.x, -c.y, 0);
+  return g;
+}
+
+function showError(msg) { const el = $("#error"); el.textContent = msg; el.classList.toggle("hidden", !msg); }
+
+let uploadedFonts = {};
+async function getSelectedFont(prefix) {
+  const sel = form.elements[prefix + "font"].value;
+  if (sel === "upload") {
+    if (!uploadedFonts[prefix]) throw new Error("Choose a .ttf or .otf file to upload.");
+    return uploadedFonts[prefix];
+  }
+  return loadFont(sel);
+}
+
+async function rebuild() {
+  showError("");
+  const name = (form.elements.name.value || "").trim();
+  if (!name) return;
+  const initial = (form.elements.initial.value || name[0].toUpperCase()).trim().slice(0, 2);
+  const iH = Math.max(10, parseFloat(form.elements.initial_height.value) || 140);
+  const iD = Math.max(1, parseFloat(form.elements.initial_depth.value) || 18);
+  const nS = Math.max(5, parseFloat(form.elements.name_size.value) || 46);
+  const nD = Math.max(0.5, parseFloat(form.elements.name_depth.value) || 5);
+  const nX = parseFloat(form.elements.name_offset_x.value) || 0;
+  const nY = parseFloat(form.elements.name_offset_y.value) || 0;
+  const nA = (parseFloat(form.elements.name_angle.value) || 0) * Math.PI / 180;
+
+  $("#busy").classList.remove("hidden");
+  try {
+    const [iFont, nFont] = await Promise.all([getSelectedFont("i_"), getSelectedFont("n_")]);
+    const probe = extrudeText(iFont, initial, 100, 1);
+    probe.computeBoundingBox();
+    const em = 100 * iH / (probe.boundingBox.max.y - probe.boundingBox.min.y);
+    probe.dispose();
+
+    const gInit = extrudeText(iFont, initial, em, iD);
+    const gName = extrudeText(nFont, name, nS, nD);
+    if (nA) gName.rotateZ(nA);
+    gName.translate(nX, nY, iD);
+
+    // Stand upright for studio display
+    gInit.rotateX(Math.PI / 2);
+    gName.rotateX(Math.PI / 2);
+
+    const box = new THREE.Box3();
+    gInit.computeBoundingBox(); box.union(gInit.boundingBox);
+    gName.computeBoundingBox(); box.union(gName.boundingBox);
+    const c = new THREE.Vector3(); box.getCenter(c);
+    const sz = box.getSize(new THREE.Vector3());
+
+    gInit.translate(-c.x, -c.y, -box.min.z); gInit.computeVertexNormals();
+    gName.translate(-c.x, -c.y, -box.min.z); gName.computeVertexNormals();
+
+    group.children.slice().forEach(m => { group.remove(m); m.geometry.dispose(); });
+    initialMesh = new THREE.Mesh(gInit, mats.base);
+    nameMesh = new THREE.Mesh(gName, mats.accent);
+    initialMesh.castShadow = initialMesh.receiveShadow = true;
+    nameMesh.castShadow = nameMesh.receiveShadow = true;
+    group.add(initialMesh, nameMesh);
+
+    radius = sz.length() / 2;
+    targetZ = sz.z * 0.48;
+    const span = Math.max(sz.x, sz.y, sz.z, 120) * 1.4;
+    keyL.shadow.camera.left = -span; keyL.shadow.camera.right = span;
+    keyL.shadow.camera.top = span; keyL.shadow.camera.bottom = -span;
+    keyL.shadow.camera.updateProjectionMatrix();
+
+    $("#stats").innerHTML = `Size <b>${sz.x.toFixed(1)} × ${sz.z.toFixed(1)} × ${sz.y.toFixed(1)}</b> mm`;
+    $("#dl-initial").disabled = $("#dl-name").disabled = false;
+    if (needView) { setView("iso"); needView = false; }
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    $("#busy").classList.add("hidden");
+  }
+}
+
+// ---------- presets & controls ----------
+const presets = [
+  { name: "bernardo", base: "#e53935", accent: "#fdd835", angle: 6, size: 46, y: -5, font: "fonts/Pacifico.ttf" },
+  { name: "benício",  base: "#2e9e44", accent: "#7b4bbd", angle: 0, size: 48, y: 0,  font: "fonts/Pacifico.ttf" },
+  { name: "iris",     base: "#e85692", accent: "#ffffff", angle: 0, size: 56, y: 0,  font: "fonts/GrandHotel.ttf" },
+  { name: "noah",     base: "#1e56c5", accent: "#e53935", angle: 6, size: 48, y: -12, font: "fonts/Pacifico.ttf" },
+  { name: "lara",     base: "#df7694", accent: "#ffffff", angle: 0, size: 54, y: -6, font: "fonts/GrandHotel.ttf" },
+];
+function setField(name, val) {
+  const el = form.elements[name]; if (!el) return;
+  el.value = val;
+  const r = form.querySelector(`input[type=range][data-for="${name}"]`);
+  if (r) r.value = val;
+}
+for (const p of presets) {
+  const b = document.createElement("button"); b.type = "button";
+  b.innerHTML = `<span class="dot" style="background:${p.base}"></span><span class="dot" style="background:${p.accent}"></span>${p.name}`;
+  b.onclick = () => {
+    setField("name", p.name); setField("initial", "");
+    setField("name_angle", p.angle); setField("name_size", p.size);
+    setField("name_offset_x", 0); setField("name_offset_y", p.y);
+    form.elements.n_font.value = p.font; form.elements.n_file.classList.add("hidden");
+    $("#c_base").value = p.base; $("#c_accent").value = p.accent; applyColors();
+    rebuild();
+  };
+  $("#presets").append(b);
+}
+function applyColors() { mats.base.color.set($("#c_base").value); mats.accent.color.set($("#c_accent").value); }
+$("#c_base").oninput = $("#c_accent").oninput = applyColors;
+applyColors();
+
+$$("input[type=range]").forEach(r => {
+  const num = form.elements[r.dataset.for];
+  r.value = num.value;
+  r.addEventListener("input", () => { num.value = r.value; rebuild(); });
+  num.addEventListener("input", () => { r.value = num.value; rebuild(); });
+});
+for (const p of ["i_", "n_"]) {
+  const sel = form.elements[p + "font"], file = form.elements[p + "file"];
+  sel.addEventListener("change", () => {
+    file.classList.toggle("hidden", sel.value !== "upload");
+    if (sel.value !== "upload") rebuild();
+  });
+  file.addEventListener("change", async () => {
+    const f = file.files[0]; if (!f) return;
+    try { uploadedFonts[p] = opentype.parse(await f.arrayBuffer()); rebuild(); }
+    catch { showError("Could not parse uploaded font file."); }
+  });
+}
+form.elements.name.addEventListener("input", rebuild);
+form.elements.initial.addEventListener("input", rebuild);
+
+function exportFlatSTL(mesh, suffix) {
+  if (!mesh) return;
+  const g = mesh.geometry.clone();
+  g.rotateX(-Math.PI / 2); // lay flat on Z=0 print bed
+  g.computeBoundingBox();
+  g.translate(0, 0, -g.boundingBox.min.z);
+  const exporter = new STLExporter();
+  const bin = exporter.parse(new THREE.Mesh(g), { binary: true });
+  g.dispose();
+  const safe = (form.elements.name.value || "sign").trim().replace(/\s+/g, "_");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([bin], { type: "application/octet-stream" }));
+  a.download = `${safe}_${suffix}.stl`;
+  a.click();
+}
+$("#dl-initial").onclick = () => exportFlatSTL(initialMesh, "initial");
+$("#dl-name").onclick = () => exportFlatSTL(nameMesh, "name");
+
+rebuild();
+</script>
+</body>
+</html>
+

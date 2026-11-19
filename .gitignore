@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Generated 3D / CAD exports
+*.stl
+*.step
+*.stp
+*.3mf
+*.obj
+*.zip
+
+# OS & editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
