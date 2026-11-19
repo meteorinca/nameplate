@@ -128,6 +128,7 @@ def parse(form, files):
             name_offset_x=_num(form, "name_offset_x", 0),
             name_offset_y=_num(form, "name_offset_y", -5),
             name_angle=_num(form, "name_angle", 0),
+            mirror=form.get("mirror") in ("1", "true", "on"),
         )
     else:
         mode = "plate"

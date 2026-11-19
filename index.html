@@ -100,6 +100,9 @@
           <label><input type="color" id="c_base" value="#e53935"> Initial</label>
           <label><input type="color" id="c_accent" value="#fdd835"> Name</label>
         </div>
+        <label style="display:flex;align-items:center;gap:6px;font-weight:500;margin-top:10px;cursor:pointer;">
+          <input type="checkbox" name="mirror" id="mirror"> Mirror (for flat-side printing)
+        </label>
         <div class="hint">Two separate flat-backed parts (Initial + Name) — print in different colors and glue together.</div>
       </fieldset>
       <fieldset>
@@ -291,7 +294,28 @@ function textToShapes(font, text, size) {
     else if (c.type === "C") sp.bezierCurveTo(c.x1, -c.y1, c.x2, -c.y2, c.x, -c.y);
     else if (c.type === "Z" && sp.currentPath) sp.currentPath.closePath();
   }
-  return sp.toShapes(true);
+  return sp.toShapes(false);
+}
+
+function mirrorGeoX(g) {
+  const pos = g.attributes.position;
+  for (let i = 0; i < pos.count; i++) pos.setX(i, -pos.getX(i));
+  pos.needsUpdate = true;
+  if (g.index) {
+    const idx = g.index.array;
+    for (let i = 0; i < idx.length; i += 3) { const t = idx[i + 1]; idx[i + 1] = idx[i + 2]; idx[i + 2] = t; }
+    g.index.needsUpdate = true;
+  } else {
+    for (let i = 0; i < pos.count; i += 3) {
+      for (let k = 0; k < 3; k++) {
+        const a = pos.array[(i + 1) * 3 + k];
+        pos.array[(i + 1) * 3 + k] = pos.array[(i + 2) * 3 + k];
+        pos.array[(i + 2) * 3 + k] = a;
+      }
+    }
+  }
+  g.computeVertexNormals();
+  return g;
 }
 
 function extrudeText(font, text, size, depth) {
@@ -341,6 +365,7 @@ async function rebuild() {
     const gName = extrudeText(nFont, name, nS, nD);
     if (nA) gName.rotateZ(nA);
     gName.translate(nX, nY, iD);
+    if ($("#mirror").checked) { mirrorGeoX(gInit); mirrorGeoX(gName); }
 
     // Stand upright for studio display
     gInit.rotateX(Math.PI / 2);
@@ -430,6 +455,7 @@ for (const p of ["i_", "n_"]) {
 }
 form.elements.name.addEventListener("input", rebuild);
 form.elements.initial.addEventListener("input", rebuild);
+$("#mirror").addEventListener("change", rebuild);
 
 function exportFlatSTL(mesh, suffix) {
   if (!mesh) return;

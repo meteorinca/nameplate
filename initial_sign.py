@@ -87,6 +87,7 @@ def initial_sign(
     name_offset_x=0,
     name_offset_y=-5,
     name_angle=0,
+    mirror=False,
 ):
     """Return (initial_solid, name_solid) CadQuery shapes.
 
@@ -139,6 +140,10 @@ def initial_sign(
         raise RuntimeError("Could not build a valid initial letter. Try another font or size.")
     if name_solid is None or not name_solid.isValid():
         raise RuntimeError("Could not build a valid name solid. Try another font or size.")
+
+    if mirror:
+        initial_solid = initial_solid.mirror("YZ")
+        name_solid = name_solid.mirror("YZ")
 
     return initial_solid, name_solid
 
